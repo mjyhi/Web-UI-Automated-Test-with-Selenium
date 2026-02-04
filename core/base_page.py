@@ -1,4 +1,4 @@
-"""Base Page Object with common UI operations."""
+"""页面基类（封装通用 UI 操作）。"""
 
 from datetime import datetime
 from typing import Optional, Tuple
@@ -20,7 +20,7 @@ class BasePage:
     def __init__(self, driver: WebDriver, base_url: str, timeout: int = 10):
         self.driver = driver
         self.base_url = base_url.rstrip("/")
-        # Explicit wait for stable element operations
+        # 显式等待，保证元素操作稳定
         self.wait = WebDriverWait(driver, timeout)
         self.logger = get_logger(self.__class__.__name__, self._default_log_dir())
 
@@ -32,7 +32,7 @@ class BasePage:
         return str(base_dir / "logs")
 
     def _build_url(self, path: str) -> str:
-        """Join base_url with a path or accept full URL."""
+        """拼接 base_url 与相对路径，或直接使用绝对 URL。"""
         if not path:
             return self.base_url
         parsed = urlparse(path)
@@ -41,13 +41,13 @@ class BasePage:
         return f"{self.base_url}/{path.lstrip('/')}"
 
     def open(self, path: str = "") -> None:
-        """Open a page by relative path or absolute URL."""
+        """打开页面（相对路径或绝对 URL）。"""
         url = self._build_url(path)
         self.logger.info("Opening URL: %s", url)
         self.driver.get(url)
 
     def find(self, locator: Locator):
-        """Find element present in DOM."""
+        """查找 DOM 中存在的元素。"""
         try:
             return self.wait.until(EC.presence_of_element_located(locator))
         except Exception as exc:
@@ -55,7 +55,7 @@ class BasePage:
             raise ElementNotFoundError(str(locator)) from exc
 
     def find_visible(self, locator: Locator):
-        """Find element that is visible on the page."""
+        """查找页面可见元素。"""
         try:
             return self.wait.until(EC.visibility_of_element_located(locator))
         except Exception as exc:
@@ -63,35 +63,43 @@ class BasePage:
             raise ElementNotFoundError(str(locator)) from exc
 
     def find_all(self, locator: Locator):
-        """Find all matching elements without explicit wait."""
+        """查找所有匹配元素（不等待）。"""
         return self.driver.find_elements(*locator)
 
     def click(self, locator: Locator) -> None:
-        """Click when element is clickable."""
+        """点击可点击元素。"""
         element = self.wait.until(EC.element_to_be_clickable(locator))
         element.click()
 
     def type(self, locator: Locator, text: str, clear: bool = True) -> None:
-        """Type into input; clear by default."""
+        """输入文本（默认先清空）。"""
         element = self.find_visible(locator)
         if clear:
             element.clear()
         element.send_keys(text)
 
     def get_text(self, locator: Locator) -> str:
-        """Get visible text from element."""
+        """获取元素可见文本。"""
         return self.find_visible(locator).text
 
     def is_visible(self, locator: Locator) -> bool:
-        """Return True if element is visible, else False."""
+        """判断元素是否可见。"""
         try:
             self.find_visible(locator)
             return True
         except ElementNotFoundError:
             return False
 
+    def wait_until_url_contains(self, text: str, timeout: int = 10) -> bool:
+        """等待 URL 包含指定字符串。"""
+        return WebDriverWait(self.driver, timeout).until(EC.url_contains(text))
+
+    def get_current_url(self) -> str:
+        """获取当前页面 URL。"""
+        return self.driver.current_url
+
     def save_screenshot(self, directory: str, name: Optional[str] = None) -> str:
-        """Save a screenshot into the given directory."""
+        """保存截图到指定目录。"""
         from pathlib import Path
 
         Path(directory).mkdir(parents=True, exist_ok=True)

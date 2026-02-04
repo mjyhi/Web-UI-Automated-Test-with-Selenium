@@ -1,9 +1,9 @@
-"""Custom exceptions for the UI automation framework."""
+"""框架自定义异常。"""
 
 
 class UIAutomationError(Exception):
-    """Base exception for UI automation framework."""
+    """UI 自动化框架基础异常。"""
 
 
 class ElementNotFoundError(UIAutomationError):
-    """Raised when an expected element cannot be found."""
+    """元素未找到异常。"""

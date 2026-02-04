@@ -1,4 +1,4 @@
-"""Logging helpers for UI automation tests."""
+"""日志工具（文件 + 控制台输出）。"""
 
 import logging
 import os
@@ -9,7 +9,7 @@ _LOGGERS = {}
 
 
 def get_logger(name: str, log_dir: str) -> logging.Logger:
-    """Create or reuse a logger with file + console handlers."""
+    """创建或复用日志器（文件 + 控制台）。"""
     if name in _LOGGERS:
         return _LOGGERS[name]
 
@@ -18,7 +18,7 @@ def get_logger(name: str, log_dir: str) -> logging.Logger:
     logger.setLevel(logging.INFO)
     logger.propagate = False
 
-    # Avoid duplicate handlers when calling multiple times.
+    # 避免重复添加 handler
     if not logger.handlers:
         timestamp = datetime.now().strftime("%Y%m%d")
         file_path = os.path.join(log_dir, f"ui_tests_{timestamp}.log")

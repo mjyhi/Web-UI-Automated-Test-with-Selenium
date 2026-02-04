@@ -1,0 +1,7 @@
+{
+  "register": {
+    "username_prefix": "ui_test_user",
+    "password": "Test@123456",
+    "confirm_password": "Test@123456"
+  }
+}

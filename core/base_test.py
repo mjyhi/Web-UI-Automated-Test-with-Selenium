@@ -1,8 +1,10 @@
-"""Base unittest class with WebDriver lifecycle management."""
+"""测试基类（统一管理 WebDriver 生命周期）。"""
 
 import os
 import unittest
 from datetime import datetime
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 from ui_tests.core.driver_factory import DriverFactory
 from ui_tests.utils.config_loader import load_config
@@ -10,7 +12,7 @@ from ui_tests.utils.logger import get_logger
 
 
 class BaseTest(unittest.TestCase):
-    """Shared setup/teardown for all UI tests."""
+    """所有 UI 用例的公共基类。"""
     driver = None
     config = None
     base_url = None
@@ -18,10 +20,22 @@ class BaseTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Initialize driver and global settings."""
+        """初始化驱动与全局配置。"""
         cls.config = load_config()
         logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
         cls.logger = get_logger("UITest", logs_dir)
+
+        # 可选：当目标服务不可用时跳过测试
+        require_server = os.getenv("UI_REQUIRE_SERVER", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if not cls._is_server_available(cls.config.base_url):
+            message = f"目标服务不可访问：{cls.config.base_url}"
+            if require_server:
+                raise RuntimeError(message)
+            raise unittest.SkipTest(message)
 
         cls.driver = DriverFactory.create_driver(cls.config)
         cls.driver.implicitly_wait(cls.config.implicit_wait)
@@ -30,18 +44,18 @@ class BaseTest(unittest.TestCase):
         cls.base_url = cls.config.base_url
 
     def tearDown(self):
-        """Capture screenshot on failure."""
+        """失败时自动截图。"""
         if self._test_failed():
             self._capture_screenshot()
 
     @classmethod
     def tearDownClass(cls):
-        """Quit driver when all tests complete."""
+        """关闭驱动。"""
         if cls.driver:
             cls.driver.quit()
 
     def _test_failed(self) -> bool:
-        """Check if current test has failed."""
+        """判断当前用例是否失败。"""
         outcome = getattr(self, "_outcome", None)
         if not outcome:
             return False
@@ -59,7 +73,7 @@ class BaseTest(unittest.TestCase):
         return any(err for (_, err) in errors + failures)
 
     def _capture_screenshot(self) -> None:
-        """Save failure screenshot into screenshots directory."""
+        """保存失败截图。"""
         screenshots_dir = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "screenshots"
         )
@@ -72,3 +86,13 @@ class BaseTest(unittest.TestCase):
             self.logger.info("Saved failure screenshot: %s", path)
         except Exception as exc:
             self.logger.error("Failed to save screenshot: %s", exc)
+
+    @staticmethod
+    def _is_server_available(base_url: str) -> bool:
+        """简单健康检查，判断目标服务是否可访问。"""
+        try:
+            request = Request(base_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urlopen(request, timeout=5) as response:
+                return response.status < 500
+        except (URLError, ValueError):
+            return False

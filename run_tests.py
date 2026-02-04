@@ -1,4 +1,4 @@
-"""Test runner that generates HTML reports."""
+"""测试运行入口（生成 HTML 报告）。"""
 
 import os
 import sys
@@ -8,7 +8,7 @@ import HtmlTestRunner
 
 
 def main() -> int:
-    """Discover and run test cases, then output HTML report."""
+    """发现并执行用例，生成 HTML 报告。"""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(base_dir)
     sys.path.insert(0, project_root)
